@@ -5,7 +5,7 @@
 ## Version: @project-version@
 ## SavedVariables: WoWMusicLibraryDB
 ## OptionalDeps: Ace3, LibSharedMedia-3.0, LibWindow-1.1, LibDataBroker-1.1, LibDBIcon-1.0
-## X-Curse-Project-ID: <set-after-curseforge-project-exists>
+## X-Curse-Project-ID: 1581177
 ## X-Embeds: Ace3, LibSharedMedia-3.0, LibWindow-1.1, LibDataBroker-1.1, LibDBIcon-1.0
 
 Libs\LibStub\LibStub.lua
