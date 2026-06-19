@@ -9,7 +9,7 @@ local defaults = {
 		volume = 1,
 		shuffle = false,
 		repeatMode = "none",
-		selectedPlaylistId = "official-main",
+		selectedPlaylistId = "official-kalimdor",
 		playlistCounter = 0,
 		playlists = {},
 		minimap = { hide = false },
