@@ -20,10 +20,20 @@ local function ContainsValue(list, value)
 end
 
 local function SetButtonEnabled(button, enabled)
+    local fontString = button:GetFontString()
+
     if enabled then
         button:Enable()
+        UI:SkinBox(button, UI.colors.button, UI.colors.border)
+        if fontString then
+            fontString:SetTextColor(UI.colors.text[1], UI.colors.text[2], UI.colors.text[3], UI.colors.text[4])
+        end
     else
         button:Disable()
+        UI:SkinBox(button, UI.colors.buttonDisabled, UI.colors.border)
+        if fontString then
+            fontString:SetTextColor(UI.colors.textDisabled[1], UI.colors.textDisabled[2], UI.colors.textDisabled[3], UI.colors.textDisabled[4])
+        end
     end
 end
 
@@ -337,7 +347,7 @@ function UI:RefreshTracks()
             local rowIsOfficial = isOfficial
 
             table.insert(visibleTrackIds, trackId)
-            self:SetBackdrop(row, trackId == WML.Player.trackId and self.colors.rowActive or self.colors.row)
+            self:SetBackdrop(row, trackId == WML.Player.trackId and self.colors.rowActive or self.colors.row, trackId == WML.Player.trackId and self.colors.borderBright or self.colors.border)
             row:SetHeight(38)
             row.title:ClearAllPoints()
             row.title:SetPoint("LEFT", 104, 7)
