@@ -1,4 +1,4 @@
-local WML = WoWMusicLibrary
+local WML = SpotiWoW
 local UI = WML.UI
 
 local function AddDropdownOption(options, text, checked, func)
@@ -8,6 +8,16 @@ local function AddDropdownOption(options, text, checked, func)
         func = func,
     })
 end
+
+local AUDIO_CHANNELS = {
+    { text = "Master", value = "Master" },
+    { text = "Music", value = "Music" },
+    { text = "Sound Effects", value = "SFX" },
+    { text = "Ambience", value = "Ambience" },
+    { text = "Dialog", value = "Dialog" },
+}
+
+local MINI_OPACITY_VALUES = { 1, 0.9, 0.8, 0.7, 0.6, 0.5 }
 
 local function ContainsValue(list, value)
     for _, entry in ipairs(list) do
@@ -81,6 +91,37 @@ local function GetPageTracks(sourceTracks, page, pageSize)
     return pageTracks, firstIndex, lastIndex
 end
 
+local function GetTrackValues(sourceTracks, field)
+    local values = {}
+    local seen = {}
+
+    for _, track in ipairs(sourceTracks or {}) do
+        local value = track[field]
+        if value and value ~= "" and not seen[value] then
+            seen[value] = true
+            table.insert(values, value)
+        end
+    end
+
+    table.sort(values)
+    return values
+end
+
+local function GetAudioChannelText(value)
+    for _, channel in ipairs(AUDIO_CHANNELS) do
+        if channel.value == value then
+            return channel.text
+        end
+    end
+
+    return "Master"
+end
+
+local function GetMiniOpacityText(value)
+    value = tonumber(value) or 1
+    return string.format("%d%%", math.floor((value * 100) + 0.5))
+end
+
 function UI:GetSelectedTargetPlaylist()
     local playlists = WML.Library:GetUserPlaylists()
     if #playlists == 0 then
@@ -143,33 +184,11 @@ function UI:RefreshTargetDropdown()
     self:SetDropdownText(self.targetDropdown, playlist and playlist.name or "My Playlist (new)")
 end
 
-function UI:BuildContinentDropdown()
-    local options = {}
-    local selected = self.filter.continent or "all"
-
-    AddDropdownOption(options, "All continents", selected == "all", function()
-        self.filter.continent = "all"
-        self.filter.zone = "all"
-        self.filter.biome = "all"
-        self:RefreshTracks()
-    end)
-
-    for _, continent in ipairs(WML.Library:GetContinents()) do
-        AddDropdownOption(options, continent, selected == continent, function()
-            self.filter.continent = continent
-            self.filter.zone = "all"
-            self.filter.biome = "all"
-            self:RefreshTracks()
-        end)
-    end
-
-    return options
-end
-
 function UI:BuildZoneDropdown()
     local options = {}
     local selectedZone = self.filter.zone or "all"
     local selectedBiome = self.filter.biome or "all"
+    local tracks = WML.Library:GetPlaylistTracks(self.currentPlaylistId)
 
     AddDropdownOption(options, "All zones/biomes", selectedZone == "all" and selectedBiome == "all", function()
         self.filter.zone = "all"
@@ -177,7 +196,7 @@ function UI:BuildZoneDropdown()
         self:RefreshTracks()
     end)
 
-    for _, zone in ipairs(WML.Library:GetZones(self.filter.continent)) do
+    for _, zone in ipairs(GetTrackValues(tracks, "zone")) do
         AddDropdownOption(options, zone, selectedZone == zone, function()
             self.filter.zone = zone
             self.filter.biome = "all"
@@ -185,12 +204,41 @@ function UI:BuildZoneDropdown()
         end)
     end
 
-    for _, biome in ipairs(WML.Library:GetBiomes(self.filter.continent)) do
+    for _, biome in ipairs(GetTrackValues(tracks, "biome")) do
         local text = "Biome: " .. biome
         AddDropdownOption(options, text, selectedBiome == biome, function()
             self.filter.zone = "all"
             self.filter.biome = biome
             self:RefreshTracks()
+        end)
+    end
+
+    return options
+end
+
+function UI:BuildAudioChannelDropdown()
+    local options = {}
+    local selected = WML.db.profile.audioChannel or "Master"
+
+    for _, channel in ipairs(AUDIO_CHANNELS) do
+        AddDropdownOption(options, channel.text, selected == channel.value, function()
+            WML.db.profile.audioChannel = channel.value
+            self:RefreshSettingsControls()
+        end)
+    end
+
+    return options
+end
+
+function UI:BuildMiniOpacityDropdown()
+    local options = {}
+    local selected = self:GetMiniPlayerOpacity()
+
+    for _, value in ipairs(MINI_OPACITY_VALUES) do
+        AddDropdownOption(options, GetMiniOpacityText(value), math.abs(selected - value) < 0.01, function()
+            WML.db.profile.miniBackgroundOpacity = value
+            self:RefreshSettingsControls()
+            self:ApplyMiniPlayerOpacity()
         end)
     end
 
@@ -220,27 +268,22 @@ function UI:BuildTimeDropdown()
 end
 
 function UI:RefreshFilterDropdowns()
-    if not self.continentDropdown then
+    if not self.zoneDropdown then
         return
     end
 
-    self.filter.continent = self.filter.continent or "all"
     self.filter.zone = self.filter.zone or "all"
     self.filter.biome = self.filter.biome or "all"
     self.filter.timeOfDay = self.filter.timeOfDay or "all"
 
-    if self.filter.zone ~= "all" and not ContainsValue(WML.Library:GetZones(self.filter.continent), self.filter.zone) then
+    local tracks = WML.Library:GetPlaylistTracks(self.currentPlaylistId)
+    if self.filter.zone ~= "all" and not ContainsValue(GetTrackValues(tracks, "zone"), self.filter.zone) then
         self.filter.zone = "all"
     end
 
-    if self.filter.biome ~= "all" and not ContainsValue(WML.Library:GetBiomes(self.filter.continent), self.filter.biome) then
+    if self.filter.biome ~= "all" and not ContainsValue(GetTrackValues(tracks, "biome"), self.filter.biome) then
         self.filter.biome = "all"
     end
-
-    self:SetDropdownText(
-        self.continentDropdown,
-        self.filter.continent ~= "all" and self.filter.continent or "All continents"
-    )
 
     if self.filter.zone ~= "all" then
         self:SetDropdownText(self.zoneDropdown, self.filter.zone)
@@ -259,6 +302,16 @@ function UI:RefreshFilterDropdowns()
     end
 end
 
+function UI:RefreshSettingsControls()
+    if self.audioChannelDropdown then
+        self:SetDropdownText(self.audioChannelDropdown, GetAudioChannelText(WML.db.profile.audioChannel or "Master"))
+    end
+
+    if self.miniOpacityDropdown then
+        self:SetDropdownText(self.miniOpacityDropdown, GetMiniOpacityText(self:GetMiniPlayerOpacity()))
+    end
+end
+
 function UI:GetRowsForPlaylist(playlist, isOfficial)
     local rows = {}
     local filters = {
@@ -268,7 +321,6 @@ function UI:GetRowsForPlaylist(playlist, isOfficial)
     local action
 
     if isOfficial then
-        filters.continent = self.filter.continent
         filters.zone = self.filter.zone
         filters.biome = self.filter.biome
         filters.timeOfDay = self.filter.timeOfDay
@@ -350,7 +402,6 @@ function UI:GetTrackPageKey(playlist, isOfficial)
     }
 
     if isOfficial then
-        table.insert(parts, self.filter.continent or "all")
         table.insert(parts, self.filter.zone or "all")
         table.insert(parts, self.filter.biome or "all")
         table.insert(parts, self.filter.timeOfDay or "all")
@@ -388,19 +439,37 @@ function UI:RefreshPageControls(totalTracks, firstIndex, lastIndex)
     SetButtonEnabled(self.nextPageButton, hasPages and (self.trackPage or 1) < maxPage)
 end
 
-function UI:SetBrowseControlsShown(isOfficial)
-    self.targetLabel:SetShown(isOfficial)
-    self.targetDropdown:SetShown(isOfficial)
-    self.continentDropdown:SetShown(isOfficial)
-    self.zoneDropdown:SetShown(isOfficial)
-    self.timeDropdown:SetShown(isOfficial)
-    self.renameBox:SetShown(not isOfficial)
-    self.renameButton:SetShown(not isOfficial)
-    self.deleteButton:SetShown(not isOfficial)
+function UI:SetBrowseControlsShown(isOfficial, isSettings)
+    self.searchBox:SetShown(not isSettings)
+    self.playlistPlayButton:SetShown(not isSettings)
+    self.playlistAddAllButton:SetShown(isOfficial and not isSettings)
+    self.targetLabel:SetShown(isOfficial and not isSettings)
+    self.targetDropdown:SetShown(isOfficial and not isSettings)
+    self.zoneDropdown:SetShown(isOfficial and not isSettings)
+    self.timeDropdown:SetShown(isOfficial and not isSettings)
+    self.renameBox:SetShown(not isOfficial and not isSettings)
+    self.renameButton:SetShown(not isOfficial and not isSettings)
+    self.deleteButton:SetShown(not isOfficial and not isSettings)
+    self.trackScroll:SetShown(not isSettings)
+    self.settingsPanel:SetShown(isSettings)
 end
 
 function UI:RefreshTracks()
     self:CloseDropdowns()
+
+    if WML.db.profile.selectedPlaylistId == WML.settingsPlaylistId then
+        self.currentPlaylistId = WML.settingsPlaylistId
+        self.filteredTrackIds = {}
+        self.playlistTitle:SetText("Settings")
+        self:SetBrowseControlsShown(false, true)
+        self:RefreshSettingsControls()
+        self:RefreshPageControls(0)
+        self:RefreshPlaylistActions(false)
+        for i = 1, #self.trackRows do
+            self.trackRows[i]:Hide()
+        end
+        return
+    end
 
     local playlist, isOfficial = WML.Library:GetPlaylist(WML.db.profile.selectedPlaylistId)
     if not playlist then
@@ -414,7 +483,7 @@ function UI:RefreshTracks()
 
     self.currentPlaylistId = playlist.id
     self.playlistTitle:SetText(playlist.name)
-    self:SetBrowseControlsShown(isOfficial)
+    self:SetBrowseControlsShown(isOfficial, false)
 
     if isOfficial then
         self:RefreshTargetDropdown()

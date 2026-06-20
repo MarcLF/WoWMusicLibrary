@@ -1,4 +1,4 @@
-local WML = WoWMusicLibrary
+local WML = SpotiWoW
 
 local Player = {
 	trackId = nil,
@@ -59,7 +59,7 @@ function Player:PlayTrack(trackId, playlistId, trackIds)
 	self:Stop(true, true)
 	self:MuteZoneMusic()
 
-	local willPlay, soundHandle = PlaySoundFile(track.value, "Master", false, true)
+	local willPlay, soundHandle = PlaySoundFile(track.value, WML.db.profile.audioChannel or "Master", false, true)
 	if not willPlay then
 		self:RestoreZoneMusic()
 		WML:Print("Could not play: " .. track.title)
@@ -93,12 +93,6 @@ function Player:OnSoundFinished(soundHandle)
 	self:CancelFinishWatcher()
 	self.soundHandle = nil
 	self.isPlaying = false
-
-	if WML.db.profile.repeatMode == "none" and not WML.db.profile.shuffle then
-		self:RestoreZoneMusic()
-		WML:NotifyChanged()
-		return
-	end
 
 	local track, playlistId = self:GetRelativeTrack(1)
 	if track then
@@ -162,6 +156,13 @@ function Player:StartFinishWatcher()
 end
 
 function Player:MuteZoneMusic()
+	if WML.db.profile.audioChannel == "Music" then
+		if StopMusic then
+			StopMusic()
+		end
+		return
+	end
+
 	if self.savedMusicEnabled == nil then
 		self.savedMusicEnabled = GetCVarValue("Sound_EnableMusic") or "1"
 	end
@@ -219,11 +220,19 @@ function Player:GetState()
 end
 
 function Player:GetCurrentOrFirstTrack()
-	if self.trackId and WML.Library:GetTrack(self.trackId) then
-		return WML.Library:GetTrack(self.trackId)
+	local playlistId = WML.db.profile.selectedPlaylistId
+	if playlistId == WML.settingsPlaylistId then
+		playlistId = self.playlistId
 	end
 
-	local tracks = self:GetPlaybackTracks(WML.db.profile.selectedPlaylistId)
+	local tracks = self:GetPlaybackTracks(playlistId)
+
+	for _, track in ipairs(tracks) do
+		if track.id == self.trackId then
+			return track
+		end
+	end
+
 	if #tracks == 0 then
 		tracks = WML.Library:GetPlaylistTracks("official-kalimdor")
 		self.playlistId = "official-kalimdor"
@@ -272,7 +281,7 @@ function Player:GetRelativeTrack(delta)
 		return track, playlistId
 	end
 
-	local index = 1
+	local index = delta > 0 and 0 or (#tracks + 1)
 	for i, track in ipairs(tracks) do
 		if track.id == self.trackId then
 			index = i
@@ -280,9 +289,7 @@ function Player:GetRelativeTrack(delta)
 		end
 	end
 
-	if WML.db.profile.repeatMode ~= "track" then
-		index = index + delta
-	end
+	index = index + delta
 
 	if index < 1 then
 		index = #tracks

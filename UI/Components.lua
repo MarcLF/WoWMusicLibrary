@@ -1,4 +1,4 @@
-local WML = WoWMusicLibrary
+local WML = SpotiWoW
 
 local UI = WML.UI or {
     sidebarButtons = {},
@@ -8,7 +8,6 @@ local UI = WML.UI or {
     trackPage = 1,
     pageSize = 50,
     filter = {
-        continent = "all",
         zone = "all",
         biome = "all",
         timeOfDay = "all",
@@ -207,7 +206,7 @@ end
 
 function UI:ToggleDropdown(dropdown)
     if not dropdown.menu then
-        local menu = CreateFrame("Frame", nil, self.frame, "BackdropTemplate")
+        local menu = CreateFrame("Frame", nil, dropdown:GetParent() or UIParent, "BackdropTemplate")
         dropdown.menu = menu
         menu:SetFrameStrata("DIALOG")
         menu:SetClampedToScreen(true)

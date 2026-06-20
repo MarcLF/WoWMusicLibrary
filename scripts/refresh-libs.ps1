@@ -68,51 +68,6 @@ $Libraries = @(
         )
     },
     @{
-        Name = "AceGUI-3.0"
-        File = "AceGUI-3.0.xml"
-        Candidates = @(
-            "ElvUI_Libraries\Game\Shared\Ace3\AceGUI-3.0",
-            "Details\Libs\AceGUI-3.0",
-            "BigDebuffs\Libs\AceGUI-3.0"
-        )
-    },
-    @{
-        Name = "AceConfig-3.0"
-        File = "AceConfig-3.0.xml"
-        Candidates = @(
-            "ElvUI_Libraries\Game\Shared\Ace3\AceConfig-3.0",
-            "Details\Libs\AceConfig-3.0",
-            "BigDebuffs\Libs\AceConfig-3.0"
-        )
-    },
-    @{
-        Name = "LibSharedMedia-3.0"
-        File = "lib.xml"
-        Candidates = @(
-            "ElvUI_Libraries\Game\Shared\LibSharedMedia-3.0",
-            "Details\Libs\LibSharedMedia-3.0",
-            "BigWigs\Libs\LibSharedMedia-3.0"
-        )
-    },
-    @{
-        Name = "LibDataBroker-1.1"
-        File = "LibDataBroker-1.1.lua"
-        Candidates = @(
-            "BigWigs\Libs\LibDataBroker-1.1",
-            "Details\Libs\LibDataBroker-1.1",
-            "ElvUI_Libraries\Game\Shared\LibDataBroker"
-        )
-    },
-    @{
-        Name = "LibDBIcon-1.0"
-        File = "LibDBIcon-1.0.lua"
-        Candidates = @(
-            "BigWigs\Libs\LibDBIcon-1.0",
-            "Details\Libs\LibDBIcon-1.0",
-            "BugSack\Libs\LibDBIcon-1.0"
-        )
-    },
-    @{
         Name = "LibWindow-1.1"
         File = "LibWindow-1.1.lua"
         Candidates = @(
@@ -141,7 +96,7 @@ function Get-LibrarySource($Library) {
         return $match.DirectoryName
     }
 
-    throw "Could not find $($Library.Name). Update another addon that embeds it, or install a packaged WoWMusicLibrary zip."
+    throw "Could not find $($Library.Name). Update another addon that embeds it, or install a packaged SpotiWoW zip."
 }
 
 $libsRoot = [System.IO.Path]::GetFullPath($LibsDir)

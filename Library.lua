@@ -1,4 +1,4 @@
-local WML = WoWMusicLibrary
+local WML = SpotiWoW
 local Library = {}
 WML.Library = Library
 
